@@ -1,0 +1,49 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# next.js
+.next/
+out/
+build/
+dist/
+
+# env
+.env
+.env.local
+.env.*.local
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+
+# editor
+.vscode/
+.idea/
+*.swp
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# testing
+coverage/
+.nyc_output/
+
+# iCloud (Documents 是 iCloud 同步目录，避免大文件上云)
+.icloud
+*.icloud
+
+# bun
+.bun/
+
+# design artifacts (大图片/PSD 不进 git，单独管理)
+mockups/raw/
+*.psd
+*.sketch

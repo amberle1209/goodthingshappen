@@ -66,9 +66,9 @@ When user request matches a skill, invoke it via the Skill tool.
 - Research notes: `~/Documents/Obsidian Vault/ai/business/AI创业副业/bloom-app-research.md`
 - gstack project memory: `~/.gstack/projects/AI/`
 
-## iCloud / Documents folder note
+## Project location
 
-This repo lives in `~/Documents/Claude/Projects/`, which is iCloud-synced. `.gitignore` excludes `node_modules/`, `.next/`, and other large/transient artifacts to avoid sync churn. If you see iCloud upload pressure, check `.gitignore` first.
+This repo lives in `~/Desktop/projects/goodthingshappen/`.
 
 ## Phase 1 Kill Switch (success criteria)
 

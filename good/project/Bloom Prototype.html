@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Bloom — three good things</title>
+<link rel="stylesheet" href="styles.css"/>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<style>
+  body { background: #ece7da; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 32px; }
+  .stage { position: relative; }
+  .caption {
+    margin-top: 14px;
+    text-align: center;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 10px; letter-spacing: 3px; text-transform: uppercase;
+    color: rgba(45,40,32,0.5);
+  }
+</style>
+</head>
+<body>
+
+<div class="stage">
+  <div id="bloom-root"></div>
+  <div class="caption" id="caption">tip · fill in 3 good things, pick a mood, then watch today turn into a tiny world</div>
+</div>
+
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="bloom-primitives.jsx"></script>
+<script type="text/babel" src="bloom-screens.jsx"></script>
+<script type="text/babel" src="bloom-welcome.jsx"></script>
+<script type="text/babel" src="bloom-tearaway.jsx"></script>
+<script type="text/babel" src="bloom-diorama.jsx"></script>
+<script type="text/babel" src="bloom-app.jsx"></script>
+
+<script type="text/babel" data-presets="react">
+  const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+    "tone": "dawn",
+    "particleIntensity": 2
+  }/*EDITMODE-END*/;
+
+  function Root() {
+    const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+    return (
+      <>
+        <BloomPhone
+          tone={t.tone}
+          particleIntensity={t.particleIntensity}
+        />
+        <TweaksPanel title="Tweaks">
+          <TweakSection label="Visual tone" />
+          <TweakRadio label="Theme" value={t.tone}
+                      options={['ghibli', 'washi', 'dawn']}
+                      onChange={(v) => setTweak('tone', v)} />
+          <TweakSection label="Motion" />
+          <TweakSlider label="Particles" value={t.particleIntensity}
+                       min={0} max={3} step={0.5}
+                       onChange={(v) => setTweak('particleIntensity', v)} />
+        </TweaksPanel>
+      </>
+    );
+  }
+
+  ReactDOM.createRoot(document.getElementById('bloom-root')).render(<Root/>);
+</script>
+
+</body>
+</html>

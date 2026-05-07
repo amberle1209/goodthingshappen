@@ -42,6 +42,10 @@ coverage/
 
 # bun
 .bun/
+bun.lock
+
+# archives
+good-handoff.zip
 
 # design artifacts (大图片/PSD 不进 git，单独管理)
 mockups/raw/

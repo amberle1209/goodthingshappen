@@ -8,6 +8,10 @@ interface ShareScreenProps {
   onBack: () => void;
   palette: Palette;
   date: DateInfo;
+  entries?: string[];
+  mood?: string;
+  imageUrl?: string;
+  entryId?: string;
 }
 
 const SHARE_OPTIONS = [

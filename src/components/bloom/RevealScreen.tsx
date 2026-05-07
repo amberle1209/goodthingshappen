@@ -10,6 +10,7 @@ interface RevealScreenProps {
   mood: string;
   date: DateInfo;
   palette: Palette;
+  imageUrl?: string;
   onShare: () => void;
   onBack: () => void;
 }

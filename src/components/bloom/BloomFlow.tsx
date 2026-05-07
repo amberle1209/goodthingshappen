@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useReducer, useState } from "react";
+import { useCallback, useEffect, useReducer, useState } from "react";
 import type { MoodId, ToneName } from "@/lib/types";
 import { TONE_PALETTES, getToday } from "@/lib/constants";
 import { flowReducer, INITIAL_STATE } from "@/lib/flowReducer";
+import { useGenerate } from "@/lib/useGenerate";
 import { WelcomeScreen } from "./WelcomeScreen";
 import { GoodThingScreen } from "./GoodThingScreen";
 import { MoodScreen } from "./MoodScreen";
@@ -26,15 +27,19 @@ export function BloomFlow({
   const [state, dispatch] = useReducer(flowReducer, INITIAL_STATE);
   const [entries, setEntries] = useState(["", "", ""]);
   const [mood, setMood] = useState<MoodId | "">("");
+  const { generate, cancel } = useGenerate();
 
   const setEntry = (i: number, v: string) =>
     setEntries((es) => es.map((e, j) => (j === i ? v : e)));
 
   const reset = () => {
+    cancel();
     setEntries(["", "", ""]);
     setMood("");
     dispatch({ type: "RESET" });
   };
+
+  useEffect(() => cancel, [cancel]);
 
   const imageUrl =
     state.phase === "generated" ||
@@ -72,14 +77,34 @@ export function BloomFlow({
   );
 
   const handleGenerateStart = useCallback(() => {
-    // Phase B will wire this to POST /api/generate
-    // For now, simulate with a placeholder that TearAwayLoading will resolve
     dispatch({
       type: "START_GENERATE",
-      entryId: "placeholder",
-      predictionId: "placeholder",
+      entryId: "pending",
+      predictionId: "pending",
     });
-  }, []);
+
+    generate(
+      { entries, mood: mood as string, tone },
+      {
+        onStart: (eid, pid) => {
+          dispatch({ type: "POLL", entryId: eid, predictionId: pid });
+        },
+        onSuccess: (eid, url) => {
+          dispatch({ type: "GENERATE_SUCCESS", entryId: eid, imageUrl: url });
+        },
+        onError: (err, eid) => {
+          dispatch({ type: "GENERATE_FAIL", error: err, entryId: eid });
+        },
+      },
+    );
+  }, [entries, mood, tone, generate]);
+
+  useEffect(() => {
+    if (state.phase === "generated") {
+      const t = setTimeout(() => dispatch({ type: "REVEAL" }), 800);
+      return () => clearTimeout(t);
+    }
+  }, [state.phase]);
 
   const isGenerating =
     state.phase === "generating" || state.phase === "polling";

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import type { DateInfo, Palette } from "@/lib/types";
 import { LOAD_LINES, entryColor } from "@/lib/constants";
 
@@ -231,7 +231,7 @@ function LoadingUnderlay({
     setLineIdx(0);
     const id = setInterval(
       () => setLineIdx((i) => (i + 1) % LOAD_LINES.length),
-      900
+      900,
     );
     return () => clearInterval(id);
   }, [phase]);
@@ -325,15 +325,15 @@ function LoadingUnderlay({
 
 /* ─── Main TearAwayLoading ───────────────────────────── */
 
-const MIN_ANIMATION_MS = 4500;
-
 interface TearAwayLoadingProps {
   entries: string[];
   mood: string;
   date: DateInfo;
   palette: Palette;
   onDone: (
-    result: { entryId: string; imageUrl: string } | { error: string },
+    result:
+      | { entryId: string; imageUrl: string }
+      | { error: string; entryId?: string },
   ) => void;
   entryId?: string;
 }
@@ -343,51 +343,15 @@ export function TearAwayLoading({
   mood,
   date,
   palette,
-  onDone,
-  entryId,
 }: TearAwayLoadingProps) {
   const [phase, setPhase] = useState(0);
-  const doneCalledRef = useRef(false);
-  const apiResultRef = useRef<
-    { entryId: string; imageUrl: string } | { error: string } | null
-  >(null);
-  const animDoneRef = useRef(false);
-
-  const tryFinish = () => {
-    if (doneCalledRef.current) return;
-    if (!animDoneRef.current || !apiResultRef.current) return;
-    doneCalledRef.current = true;
-    onDone(apiResultRef.current);
-  };
 
   useEffect(() => {
     const t1 = setTimeout(() => setPhase(1), 700);
     const t2 = setTimeout(() => setPhase(2), 1500);
     const t3 = setTimeout(() => setPhase(3), 3200);
-    const tMin = setTimeout(() => {
-      animDoneRef.current = true;
-      tryFinish();
-    }, MIN_ANIMATION_MS);
-    return () => [t1, t2, t3, tMin].forEach(clearTimeout);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => [t1, t2, t3].forEach(clearTimeout);
   }, []);
-
-  useEffect(() => {
-    if (!entryId || entryId === "placeholder") {
-      // Phase B will replace this with real API polling.
-      // For now, simulate success after a delay.
-      const t = setTimeout(() => {
-        apiResultRef.current = {
-          entryId: "simulated-id",
-          imageUrl: "",
-        };
-        tryFinish();
-      }, 3000);
-      return () => clearTimeout(t);
-    }
-    // When real API is wired, this effect will poll /api/generate/status
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [entryId]);
 
   const sheetTransform = (() => {
     if (phase === 0) return "translateY(0) rotate(0) scale(1)";
@@ -415,10 +379,8 @@ export function TearAwayLoading({
         perspective: 1400,
       }}
     >
-      {/* underneath: loading message */}
       <LoadingUnderlay phase={phase} palette={palette} mood={mood} />
 
-      {/* binder edge stub */}
       <div
         style={{
           position: "absolute",
@@ -459,7 +421,6 @@ export function TearAwayLoading({
         </div>
       </div>
 
-      {/* the page itself */}
       <div
         style={{
           position: "absolute",
@@ -491,7 +452,6 @@ export function TearAwayLoading({
         />
       </div>
 
-      {/* tearing rip line */}
       <div
         style={{
           position: "absolute",

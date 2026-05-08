@@ -15,6 +15,42 @@ export interface ImageProvider {
   checkStatus(predictionId: string): Promise<ImageStatusResult>;
 }
 
+/* ─── Mock Provider (dev without API keys) ─────────── */
+
+const MOCK_IMAGES = [
+  "https://placehold.co/1080x1920/e8d5b7/3a2e22?text=Bloom+Scene+1",
+  "https://placehold.co/1080x1920/c6d8c0/3a2e22?text=Bloom+Scene+2",
+  "https://placehold.co/1080x1920/b7cfe8/3a2e22?text=Bloom+Scene+3",
+];
+
+export class MockProvider implements ImageProvider {
+  private pending = new Map<string, { resolve: number }>();
+
+  async startGeneration(_scenePrompt: string): Promise<ImageGenerationResult> {
+    const id = `mock-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    this.pending.set(id, { resolve: Date.now() + 3000 });
+    return { predictionId: id };
+  }
+
+  async checkStatus(predictionId: string): Promise<ImageStatusResult> {
+    const entry = this.pending.get(predictionId);
+    if (!entry) {
+      return { status: "failed", error: "Unknown prediction" };
+    }
+
+    if (Date.now() < entry.resolve) {
+      return { status: "processing" };
+    }
+
+    this.pending.delete(predictionId);
+    const imageUrl =
+      MOCK_IMAGES[Math.floor(Math.random() * MOCK_IMAGES.length)];
+    return { status: "succeeded", imageUrl };
+  }
+}
+
+/* ─── Flux Schnell Provider (production) ───────────── */
+
 export class FluxSchnellProvider implements ImageProvider {
   private replicate: Replicate;
 
@@ -64,11 +100,16 @@ export class FluxSchnellProvider implements ImageProvider {
   }
 }
 
+/* ─── Provider factory ─────────────────────────────── */
+
 let _provider: ImageProvider | null = null;
 
 export function getImageProvider(): ImageProvider {
   if (!_provider) {
-    _provider = new FluxSchnellProvider();
+    const hasReplicateKey = !!process.env.REPLICATE_API_TOKEN;
+    _provider = hasReplicateKey
+      ? new FluxSchnellProvider()
+      : new MockProvider();
   }
   return _provider;
 }

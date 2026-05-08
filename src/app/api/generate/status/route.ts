@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
 import { getImageProvider } from "@/lib/scene/imageProvider";
 
 export async function GET(request: NextRequest) {
@@ -16,47 +15,47 @@ export async function GET(request: NextRequest) {
     const result = await imageProvider.checkStatus(predictionId);
 
     if (result.status === "succeeded" && result.imageUrl) {
-      const { error: updateError } = await supabase
-        .from("entries")
-        .update({
-          status: "complete",
-          image_url: result.imageUrl,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("prediction_id", predictionId);
+      // Update Supabase if configured
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-      if (updateError) {
-        return NextResponse.json(
-          { success: false, error: "Failed to update entry" },
-          { status: 500 },
-        );
+      if (supabaseUrl && supabaseKey) {
+        const { supabase } = await import("@/lib/supabase");
+        await supabase
+          .from("entries")
+          .update({
+            status: "complete",
+            image_url: result.imageUrl,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("prediction_id", predictionId);
       }
 
       return NextResponse.json({
         success: true,
-        data: {
-          status: "complete",
-          imageUrl: result.imageUrl,
-        },
+        data: { status: "complete", imageUrl: result.imageUrl },
       });
     }
 
     if (result.status === "failed" || result.status === "canceled") {
-      await supabase
-        .from("entries")
-        .update({
-          status: "failed",
-          error_message: result.error ?? "Generation failed",
-          updated_at: new Date().toISOString(),
-        })
-        .eq("prediction_id", predictionId);
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+      if (supabaseUrl && supabaseKey) {
+        const { supabase } = await import("@/lib/supabase");
+        await supabase
+          .from("entries")
+          .update({
+            status: "failed",
+            error_message: result.error ?? "Generation failed",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("prediction_id", predictionId);
+      }
 
       return NextResponse.json({
         success: true,
-        data: {
-          status: "failed",
-          error: result.error ?? "Generation failed",
-        },
+        data: { status: "failed", error: result.error ?? "Generation failed" },
       });
     }
 

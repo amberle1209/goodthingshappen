@@ -27,21 +27,26 @@ export function BloomFlow({
   const today = getToday();
 
   const [draft] = useState(loadDraft);
-  const [state, dispatch] = useReducer(flowReducer, INITIAL_STATE);
+
+  // Derive initial state directly from draft (no dispatch replay needed)
+  const initialState: typeof INITIAL_STATE = (() => {
+    if (!draft) return INITIAL_STATE;
+    const { step } = draft;
+    if (step >= 4) return { phase: "mood" } as const;
+    if (step >= 1 && step <= 3) return { phase: "input", step: step as 1 | 2 | 3 } as const;
+    return INITIAL_STATE;
+  })();
+
+  const [state, dispatch] = useReducer(flowReducer, initialState);
   const [entries, setEntries] = useState(draft?.entries ?? ["", "", ""]);
   const [mood, setMood] = useState<MoodId | "">(draft?.mood ?? "");
   const { generate, cancel } = useGenerate();
+  const [submitting, setSubmitting] = useState(false);
 
-  // Restore draft on mount
+  // Track draft restore
   useEffect(() => {
     if (draft) {
       track({ event: "draft_restored" });
-      // Replay dispatch to reach the saved step
-      if (draft.step >= 1) dispatch({ type: "BEGIN" });
-      for (let i = 1; i < Math.min(draft.step, 4); i++) {
-        dispatch({ type: "NEXT_INPUT" });
-      }
-      if (draft.step === 4) dispatch({ type: "NEXT_INPUT" });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -65,7 +70,9 @@ export function BloomFlow({
     dispatch({ type: "RESET" });
   };
 
-  useEffect(() => cancel, [cancel]);
+  useEffect(() => {
+    return cancel;
+  }, [cancel]);
 
   const imageUrl =
     state.phase === "generated" ||
@@ -106,23 +113,21 @@ export function BloomFlow({
   const handleGenerateStart = useCallback(() => {
     track({ event: "mood_selected", mood: mood || "unknown" });
     track({ event: "generation_started" });
-
-    dispatch({
-      type: "START_GENERATE",
-      entryId: "pending",
-      predictionId: "pending",
-    });
+    setSubmitting(true);
 
     generate(
       { entries, mood: mood as string, tone },
       {
         onStart: (eid, pid) => {
+          setSubmitting(false);
+          dispatch({ type: "START_GENERATE", entryId: eid, predictionId: pid });
           dispatch({ type: "POLL", entryId: eid, predictionId: pid });
         },
         onSuccess: (eid, url) => {
           dispatch({ type: "GENERATE_SUCCESS", entryId: eid, imageUrl: url });
         },
         onError: (err, eid) => {
+          setSubmitting(false);
           dispatch({ type: "GENERATE_FAIL", error: err, entryId: eid });
         },
       },
@@ -137,7 +142,7 @@ export function BloomFlow({
   }, [state.phase]);
 
   const isGenerating =
-    state.phase === "generating" || state.phase === "polling";
+    submitting || state.phase === "generating" || state.phase === "polling";
 
   const showResetButton =
     state.phase === "generated" ||
@@ -234,7 +239,7 @@ export function BloomFlow({
               textAlign: "center",
             }}
           >
-            {state.error}
+            please try again in a moment.
           </div>
           <button
             onClick={handleGenerateStart}

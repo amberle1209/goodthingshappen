@@ -1,12 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getImageProvider } from "@/lib/scene/imageProvider";
+import { checkRateLimit } from "@/lib/rateLimit";
+
+/** Only allow alphanumeric, hyphens, underscores — max 64 chars */
+const PREDICTION_ID_PATTERN = /^[a-zA-Z0-9_-]{1,64}$/;
 
 export async function GET(request: NextRequest) {
+  // Rate limit check (same sliding window as generate)
+  const { limited, response: limitResponse } = await checkRateLimit(request);
+  if (limited && limitResponse) return limitResponse;
+
   try {
     const predictionId = request.nextUrl.searchParams.get("id");
     if (!predictionId) {
       return NextResponse.json(
         { success: false, error: "Missing prediction id" },
+        { status: 400 },
+      );
+    }
+
+    if (!PREDICTION_ID_PATTERN.test(predictionId)) {
+      return NextResponse.json(
+        { success: false, error: "Invalid prediction id format" },
         { status: 400 },
       );
     }
@@ -66,10 +81,9 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (err: unknown) {
-    const message =
-      err instanceof Error ? err.message : "Internal server error";
+    console.error("[api/generate/status]", err);
     return NextResponse.json(
-      { success: false, error: message },
+      { success: false, error: "Something went wrong. Please try again." },
       { status: 500 },
     );
   }

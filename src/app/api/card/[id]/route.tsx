@@ -61,13 +61,15 @@ export async function GET(
       {
         width: 1080,
         height: 1920,
+        headers: {
+          "Cache-Control": "public, max-age=86400, immutable",
+        },
       },
     );
   } catch (err: unknown) {
-    const message =
-      err instanceof Error ? err.message : "Failed to generate card";
+    console.error("[api/card]", err);
     return NextResponse.json(
-      { success: false, error: message },
+      { success: false, error: "Failed to generate card" },
       { status: 500 },
     );
   }

@@ -6,7 +6,7 @@
  * or similar in production), but prevents prompt injection and obvious spam.
  */
 
-const MAX_ENTRY_LENGTH = 500;
+export const MAX_ENTRY_LENGTH = 500;
 const MIN_ENTRY_LENGTH = 1;
 
 /** Patterns that indicate prompt injection attempts */

@@ -8,9 +8,7 @@ import {
 import { generateMockScenePrompt } from "@/lib/scene/mockPrompt";
 import { getImageProvider } from "@/lib/scene/imageProvider";
 import { checkRateLimit } from "@/lib/rateLimit";
-import { filterEntries } from "@/lib/contentFilter";
-
-const MAX_ENTRY_LENGTH = 500;
+import { filterEntry, filterEntries, MAX_ENTRY_LENGTH } from "@/lib/contentFilter";
 const MAX_ENTRIES = 3;
 
 function sanitizeEntry(entry: string): string {
@@ -39,8 +37,15 @@ function validateInput(body: unknown):
     return { error: "All entries must be non-empty" };
   }
 
-  if (typeof mood !== "string" || mood.length === 0) {
-    return { error: "Mood is required" };
+  const VALID_MOODS: readonly string[] = ["calm", "tender", "bright", "wistful", "grateful", "tired"];
+  if (typeof mood !== "string" || !VALID_MOODS.includes(mood)) {
+    return { error: "Invalid mood" };
+  }
+
+  // Defense-in-depth: run content filter on mood too
+  const moodFilter = filterEntry(mood);
+  if (!moodFilter.passed) {
+    return { error: "Invalid mood content" };
   }
 
   const validTone = (tone as string) || "ghibli";
@@ -156,10 +161,9 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (err: unknown) {
-    const message =
-      err instanceof Error ? err.message : "Internal server error";
+    console.error("[api/generate]", err);
     return NextResponse.json(
-      { success: false, error: message },
+      { success: false, error: "Something went wrong. Please try again." },
       { status: 500 },
     );
   }

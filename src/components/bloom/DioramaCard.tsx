@@ -6,16 +6,33 @@ import { entryColor } from "@/lib/constants";
 
 /* ─── Sub-components ─────────────────────────────────── */
 
+type MarkerShape = "circle" | "square" | "diamond";
+
+const MARKER_SHAPES: readonly MarkerShape[] = ["circle", "square", "diamond"];
+
+function markerInner(shape: MarkerShape): JSX.Element {
+  switch (shape) {
+    case "circle":
+      return <circle cx="11" cy="12" r="3.5" fill="rgba(255,255,255,0.9)" />;
+    case "square":
+      return <rect x="8" y="9" width="6" height="6" rx="1" fill="rgba(255,255,255,0.9)" />;
+    case "diamond":
+      return <polygon points="11,8 14.5,12 11,16 7.5,12" fill="rgba(255,255,255,0.9)" />;
+  }
+}
+
 function Marker({
   x,
   y,
   color,
   label,
+  shape = "circle",
 }: {
   x: number;
   y: number;
   color: string;
   label: string;
+  shape?: MarkerShape;
 }) {
   return (
     <div
@@ -26,9 +43,9 @@ function Marker({
         transform: "translate(-50%, -100%)",
       }}
     >
-      <svg width="22" height="32" viewBox="0 0 22 32">
+      <svg width="22" height="32" viewBox="0 0 22 32" aria-hidden="true">
         <path d="M11 30 L4 14 Q 4 4 11 4 Q 18 4 18 14 Z" fill={color} />
-        <circle cx="11" cy="12" r="3.5" fill="rgba(255,255,255,0.9)" />
+        {markerInner(shape)}
       </svg>
       <div
         style={{
@@ -147,8 +164,8 @@ export function DioramaCard({
   return (
     <div
       style={{
-        width: 320,
-        height: 540,
+        width: "min(320px, 85vw)",
+        aspectRatio: "320 / 540",
         perspective: 1200,
         transform: revealed
           ? "scale(1) translateY(0)"
@@ -330,7 +347,7 @@ export function DioramaCard({
                   y1="86"
                   x2="25"
                   y2="50"
-                  stroke="#3a2e22"
+                  stroke="var(--tone-ink)"
                   strokeWidth="3"
                   strokeLinecap="round"
                 />
@@ -367,11 +384,11 @@ export function DioramaCard({
               />
             </svg>
 
-            {/* layer 7: 3 markers */}
+            {/* layer 7: 3 markers with distinct shapes */}
             <div style={{ position: "absolute", inset: 0, ...layer(1.5) }}>
-              <Marker x={75} y={360} color={palette[0]} label="1" />
-              <Marker x={170} y={372} color={palette[1]} label="2" />
-              <Marker x={250} y={358} color={palette[3]} label="3" />
+              <Marker x={75} y={360} color={palette[0]} label="1" shape={MARKER_SHAPES[0]} />
+              <Marker x={170} y={372} color={palette[1]} label="2" shape={MARKER_SHAPES[1]} />
+              <Marker x={250} y={358} color={palette[3]} label="3" shape={MARKER_SHAPES[2]} />
             </div>
 
             {/* layer 8: foreground petals */}
@@ -424,44 +441,49 @@ export function DioramaCard({
             padding: "8px 4px",
           }}
         >
-          {entries.map((e, i) => (
-            <div
-              key={i}
-              style={{
-                flex: 1,
-                display: "flex",
-                gap: 5,
-                alignItems: "flex-start",
-                minWidth: 0,
-              }}
-            >
-              <span
+          {entries.map((e, i) => {
+            const color = entryColor(palette, i);
+            const shape = MARKER_SHAPES[i];
+            const dotStyle: React.CSSProperties = {
+              flexShrink: 0,
+              width: 6,
+              height: 6,
+              marginTop: 4,
+              background: color,
+              ...(shape === "circle" ? { borderRadius: "50%" } :
+                shape === "diamond" ? { borderRadius: 0, transform: "rotate(45deg)", width: 5, height: 5 } :
+                { borderRadius: 1 }),
+            };
+            return (
+              <div
+                key={i}
                 style={{
-                  flexShrink: 0,
-                  width: 6,
-                  height: 6,
-                  borderRadius: "50%",
-                  background: entryColor(palette, i),
-                  marginTop: 4,
-                }}
-              />
-              <span
-                style={{
-                  fontFamily: "var(--display)",
-                  fontStyle: "italic",
-                  fontSize: 9,
-                  lineHeight: 1.3,
-                  color: "var(--tone-ink)",
-                  display: "-webkit-box",
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: "vertical",
-                  overflow: "hidden",
+                  flex: 1,
+                  display: "flex",
+                  gap: 5,
+                  alignItems: "flex-start",
+                  minWidth: 0,
                 }}
               >
-                {e || "—"}
-              </span>
-            </div>
-          ))}
+                <span style={dotStyle} aria-hidden="true" />
+                <span
+                  style={{
+                    fontFamily: "var(--display)",
+                    fontStyle: "italic",
+                    fontSize: 9,
+                    lineHeight: 1.3,
+                    color: "var(--tone-ink)",
+                    display: "-webkit-box",
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: "vertical",
+                    overflow: "hidden",
+                  }}
+                >
+                  {e || "—"}
+                </span>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

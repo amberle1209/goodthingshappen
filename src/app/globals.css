@@ -136,6 +136,28 @@ button { font-family: inherit; }
   mask: radial-gradient(circle at 50% 100%, transparent 6px, #000 6.5px) 0 0/12px 100% repeat-x;
 }
 
+/* ─── Accessibility ────────────────────────────────── */
+
+/* Focus visible ring for keyboard navigation */
+button:focus-visible,
+textarea:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--tone-accent);
+  outline-offset: 2px;
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* ─── Utility ───────────────────────────────────────── */
 .phone-scroll::-webkit-scrollbar { display: none; }
 .phone-scroll { scrollbar-width: none; }

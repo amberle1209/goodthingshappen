@@ -145,6 +145,7 @@ export function GoodThingScreen({
             onChange(e.target.value);
             setKeyTick((t) => t + 1);
           }}
+          aria-label={`Good thing ${index + 1} of 3`}
           placeholder="start anywhere. the small stuff counts."
           style={{
             width: "100%",

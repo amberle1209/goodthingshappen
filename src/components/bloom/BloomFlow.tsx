@@ -49,6 +49,9 @@ export function BloomFlow({
   return (
     <div
       data-tone={tone}
+      role="main"
+      aria-live="polite"
+      aria-atomic="false"
       style={{
         width: "100%",
         height: "100%",
@@ -116,6 +119,7 @@ export function BloomFlow({
       {step >= 6 && (
         <button
           onClick={reset}
+          aria-label="Start over"
           style={{
             position: "absolute",
             top: 18,
@@ -125,7 +129,9 @@ export function BloomFlow({
             backdropFilter: "blur(8px)",
             border: "1px solid var(--tone-rule)",
             borderRadius: 99,
-            padding: "4px 10px",
+            padding: "10px 14px",
+            minHeight: 44,
+            minWidth: 44,
             cursor: "pointer",
             fontFamily: "var(--mono)",
             fontSize: 9,

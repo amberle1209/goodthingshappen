@@ -40,6 +40,8 @@ next-env.d.ts
 # testing
 coverage/
 .nyc_output/
+playwright-report/
+test-results/
 
 # iCloud (Documents 是 iCloud 同步目录，避免大文件上云)
 .icloud

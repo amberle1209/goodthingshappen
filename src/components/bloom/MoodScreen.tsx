@@ -71,6 +71,8 @@ export function MoodScreen({
       </div>
 
       <div
+        role="group"
+        aria-label="Select your mood"
         style={{
           display: "grid",
           gridTemplateColumns: "1fr 1fr 1fr",
@@ -84,6 +86,8 @@ export function MoodScreen({
             <button
               key={m.id}
               onClick={() => onChange(m.id)}
+              aria-label={`Mood: ${m.label}`}
+              aria-pressed={active}
               style={{
                 aspectRatio: "1 / 1",
                 borderRadius: 22,

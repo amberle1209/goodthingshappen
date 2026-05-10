@@ -12,7 +12,14 @@ export function StepDots({
   total?: number;
 }) {
   return (
-    <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
+    <div
+      role="progressbar"
+      aria-valuenow={step + 1}
+      aria-valuemin={1}
+      aria-valuemax={total}
+      aria-label={`Step ${step + 1} of ${total}`}
+      style={{ display: "flex", gap: 6, justifyContent: "center" }}
+    >
       {Array.from({ length: total }).map((_, i) => (
         <span
           key={i}
@@ -38,19 +45,22 @@ export function PrimaryBtn({
   onClick,
   disabled,
   style,
+  ariaLabel,
 }: {
   children: ReactNode;
   onClick?: () => void;
   disabled?: boolean;
   style?: CSSProperties;
+  ariaLabel?: string;
 }) {
   return (
     <button
       onClick={onClick}
       disabled={disabled}
+      aria-label={ariaLabel}
       style={{
         width: "100%",
-        height: 52,
+        minHeight: 52,
         border: "none",
         borderRadius: 26,
         background: disabled
@@ -81,13 +91,16 @@ export function PrimaryBtn({
 export function GhostBtn({
   children,
   onClick,
+  ariaLabel,
 }: {
   children: ReactNode;
   onClick?: () => void;
+  ariaLabel?: string;
 }) {
   return (
     <button
       onClick={onClick}
+      aria-label={ariaLabel}
       style={{
         background: "transparent",
         border: "none",
@@ -97,7 +110,12 @@ export function GhostBtn({
         color: "var(--tone-ink-soft)",
         textTransform: "uppercase",
         cursor: "pointer",
-        padding: 8,
+        padding: "12px 8px",
+        minHeight: 44,
+        minWidth: 44,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
       }}
     >
       {children}

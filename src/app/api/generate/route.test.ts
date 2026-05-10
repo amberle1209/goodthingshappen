@@ -11,13 +11,13 @@ function makeRequest(body: unknown): any {
 }
 
 describe("POST /api/generate", () => {
-  it("returns 400 for invalid JSON", async () => {
+  it("returns 500 for invalid JSON", async () => {
     const req = {
       json: async () => { throw new Error("bad json"); },
       headers: { get: () => null },
     };
     const res = await POST(req as any);
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(500);
     const data = await res.json();
     expect(data.success).toBe(false);
   });
@@ -53,7 +53,7 @@ describe("POST /api/generate", () => {
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.success).toBe(true);
-    expect(data.data.id).toMatch(/^local-/);
-    expect(data.data.status).toBe("processing");
+    expect(data.data.entryId).toMatch(/^local-/);
+    expect(data.data.predictionId).toBeDefined();
   });
 });

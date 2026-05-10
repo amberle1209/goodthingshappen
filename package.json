@@ -14,12 +14,16 @@
   },
   "dependencies": {
     "@serwist/next": "^9.5.11",
+    "@supabase/supabase-js": "^2.105.3",
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.38.0",
+    "@vercel/og": "^0.11.1",
     "next": "14.2.35",
+    "openai": "^6.36.0",
     "posthog-js": "^1.372.10",
     "react": "^18",
-    "react-dom": "^18"
+    "react-dom": "^18",
+    "replicate": "^1.4.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",

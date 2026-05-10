@@ -231,7 +231,7 @@ function LoadingUnderlay({
     setLineIdx(0);
     const id = setInterval(
       () => setLineIdx((i) => (i + 1) % LOAD_LINES.length),
-      900
+      900,
     );
     return () => clearInterval(id);
   }, [phase]);
@@ -330,7 +330,12 @@ interface TearAwayLoadingProps {
   mood: string;
   date: DateInfo;
   palette: Palette;
-  onDone: () => void;
+  onDone: (
+    result:
+      | { entryId: string; imageUrl: string }
+      | { error: string; entryId?: string },
+  ) => void;
+  entryId?: string;
 }
 
 export function TearAwayLoading({
@@ -338,7 +343,6 @@ export function TearAwayLoading({
   mood,
   date,
   palette,
-  onDone,
 }: TearAwayLoadingProps) {
   const [phase, setPhase] = useState(0);
 
@@ -346,9 +350,8 @@ export function TearAwayLoading({
     const t1 = setTimeout(() => setPhase(1), 700);
     const t2 = setTimeout(() => setPhase(2), 1500);
     const t3 = setTimeout(() => setPhase(3), 3200);
-    const t4 = setTimeout(() => onDone(), 6800);
-    return () => [t1, t2, t3, t4].forEach(clearTimeout);
-  }, [onDone]);
+    return () => [t1, t2, t3].forEach(clearTimeout);
+  }, []);
 
   const sheetTransform = (() => {
     if (phase === 0) return "translateY(0) rotate(0) scale(1)";
@@ -376,10 +379,8 @@ export function TearAwayLoading({
         perspective: 1400,
       }}
     >
-      {/* underneath: loading message */}
       <LoadingUnderlay phase={phase} palette={palette} mood={mood} />
 
-      {/* binder edge stub */}
       <div
         style={{
           position: "absolute",
@@ -420,7 +421,6 @@ export function TearAwayLoading({
         </div>
       </div>
 
-      {/* the page itself */}
       <div
         style={{
           position: "absolute",
@@ -452,7 +452,6 @@ export function TearAwayLoading({
         />
       </div>
 
-      {/* tearing rip line */}
       <div
         style={{
           position: "absolute",

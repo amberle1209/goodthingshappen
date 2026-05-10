@@ -1,10 +1,12 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useReducer, useState } from "react";
 import type { MoodId, ToneName } from "@/lib/types";
 import { TONE_PALETTES, getToday } from "@/lib/constants";
 import { loadDraft, clearDraft, useDraftPersistence } from "@/lib/useDraftPersistence";
 import { track } from "@/lib/analytics";
+import { flowReducer, INITIAL_STATE } from "@/lib/flowReducer";
+import { useGenerate } from "@/lib/useGenerate";
 import { WelcomeScreen } from "./WelcomeScreen";
 import { GoodThingScreen } from "./GoodThingScreen";
 import { MoodScreen } from "./MoodScreen";
@@ -25,13 +27,31 @@ export function BloomFlow({
   const today = getToday();
 
   const [draft] = useState(loadDraft);
-  const [step, setStep] = useState(() => {
-    if (draft) track({ event: "draft_restored" });
-    return draft?.step ?? 0;
-  });
+  const [state, dispatch] = useReducer(flowReducer, INITIAL_STATE);
   const [entries, setEntries] = useState(draft?.entries ?? ["", "", ""]);
   const [mood, setMood] = useState<MoodId | "">(draft?.mood ?? "");
-  useDraftPersistence(entries, mood, step);
+  const { generate, cancel } = useGenerate();
+
+  // Restore draft on mount
+  useEffect(() => {
+    if (draft) {
+      track({ event: "draft_restored" });
+      // Replay dispatch to reach the saved step
+      if (draft.step >= 1) dispatch({ type: "BEGIN" });
+      for (let i = 1; i < Math.min(draft.step, 4); i++) {
+        dispatch({ type: "NEXT_INPUT" });
+      }
+      if (draft.step === 4) dispatch({ type: "NEXT_INPUT" });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Persist draft for steps before generation
+  const currentStep =
+    state.phase === "welcome" ? 0 :
+    state.phase === "input" ? state.step :
+    state.phase === "mood" ? 4 : 5;
+  useDraftPersistence(entries, mood, currentStep);
 
   const setEntry = (i: number, v: string) =>
     setEntries((es) => es.map((e, j) => (j === i ? v : e)));
@@ -39,12 +59,90 @@ export function BloomFlow({
   const reset = () => {
     track({ event: "flow_reset" });
     clearDraft();
+    cancel();
     setEntries(["", "", ""]);
     setMood("");
-    setStep(0);
+    dispatch({ type: "RESET" });
   };
 
-  const handleTearDone = useCallback(() => { track({ event: "card_revealed" }); setStep(6); }, []);
+  useEffect(() => cancel, [cancel]);
+
+  const imageUrl =
+    state.phase === "generated" ||
+    state.phase === "reveal" ||
+    state.phase === "share"
+      ? state.imageUrl
+      : undefined;
+
+  const entryId =
+    state.phase === "generating" ||
+    state.phase === "polling" ||
+    state.phase === "generated" ||
+    state.phase === "reveal" ||
+    state.phase === "share"
+      ? state.entryId
+      : undefined;
+
+  const handleTearDone = useCallback(
+    (result: { entryId: string; imageUrl: string } | { error: string; entryId?: string }) => {
+      if ("error" in result) {
+        dispatch({
+          type: "GENERATE_FAIL",
+          error: result.error,
+          entryId: result.entryId,
+        });
+      } else {
+        track({ event: "card_revealed" });
+        dispatch({
+          type: "GENERATE_SUCCESS",
+          entryId: result.entryId,
+          imageUrl: result.imageUrl,
+        });
+      }
+    },
+    [],
+  );
+
+  const handleGenerateStart = useCallback(() => {
+    track({ event: "mood_selected", mood: mood || "unknown" });
+    track({ event: "generation_started" });
+
+    dispatch({
+      type: "START_GENERATE",
+      entryId: "pending",
+      predictionId: "pending",
+    });
+
+    generate(
+      { entries, mood: mood as string, tone },
+      {
+        onStart: (eid, pid) => {
+          dispatch({ type: "POLL", entryId: eid, predictionId: pid });
+        },
+        onSuccess: (eid, url) => {
+          dispatch({ type: "GENERATE_SUCCESS", entryId: eid, imageUrl: url });
+        },
+        onError: (err, eid) => {
+          dispatch({ type: "GENERATE_FAIL", error: err, entryId: eid });
+        },
+      },
+    );
+  }, [entries, mood, tone, generate]);
+
+  useEffect(() => {
+    if (state.phase === "generated") {
+      const t = setTimeout(() => dispatch({ type: "REVEAL" }), 800);
+      return () => clearTimeout(t);
+    }
+  }, [state.phase]);
+
+  const isGenerating =
+    state.phase === "generating" || state.phase === "polling";
+
+  const showResetButton =
+    state.phase === "generated" ||
+    state.phase === "reveal" ||
+    state.phase === "share";
 
   return (
     <div
@@ -60,63 +158,150 @@ export function BloomFlow({
         background: "var(--tone-bg)",
       }}
     >
-      {step === 0 && (
-        <WelcomeScreen onBegin={() => { track({ event: "flow_started" }); setStep(1); }} date={today} />
+      {state.phase === "welcome" && (
+        <WelcomeScreen
+          onBegin={() => { track({ event: "flow_started" }); dispatch({ type: "BEGIN" }); }}
+          date={today}
+        />
       )}
 
-      {step >= 1 && step <= 3 && (
+      {state.phase === "input" && (
         <GoodThingScreen
-          key={step}
-          index={step - 1}
-          value={entries[step - 1]}
-          onChange={(v) => setEntry(step - 1, v)}
-          onNext={() => { track({ event: "entry_completed", index: step - 1 }); setStep(step + 1); }}
-          onBack={() => setStep(step - 1)}
+          key={state.step}
+          index={state.step - 1}
+          value={entries[state.step - 1]}
+          onChange={(v) => setEntry(state.step - 1, v)}
+          onNext={() => { track({ event: "entry_completed", index: state.step - 1 }); dispatch({ type: "NEXT_INPUT" }); }}
+          onBack={() => dispatch({ type: "PREV_INPUT" })}
           palette={palette}
           particleIntensity={particleIntensity}
         />
       )}
 
-      {step === 4 && (
+      {state.phase === "mood" && (
         <MoodScreen
           value={mood}
           onChange={setMood}
-          onNext={() => { track({ event: "mood_selected", mood: mood || "unknown" }); track({ event: "generation_started" }); setStep(5); }}
-          onBack={() => setStep(3)}
+          onNext={handleGenerateStart}
+          onBack={() => dispatch({ type: "BACK_TO_INPUT" })}
           palette={palette}
         />
       )}
 
-      {step === 5 && (
+      {(isGenerating || state.phase === "generated") && (
         <TearAwayLoading
           entries={entries}
           mood={mood}
           date={today}
           palette={palette}
           onDone={handleTearDone}
+          entryId={entryId}
         />
       )}
 
-      {step === 6 && (
+      {state.phase === "failed" && (
+        <div
+          className="paper-soft"
+          style={{
+            width: "100%",
+            height: "100%",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 18,
+            padding: 32,
+          }}
+        >
+          <div
+            style={{
+              fontFamily: "var(--display)",
+              fontStyle: "italic",
+              fontSize: 22,
+              color: "var(--tone-ink)",
+              textAlign: "center",
+            }}
+          >
+            the colors didn't quite land.
+          </div>
+          <div
+            style={{
+              fontFamily: "var(--mono)",
+              fontSize: 11,
+              letterSpacing: 2,
+              textTransform: "uppercase",
+              color: "var(--tone-ink-soft)",
+              textAlign: "center",
+            }}
+          >
+            {state.error}
+          </div>
+          <button
+            onClick={handleGenerateStart}
+            aria-label="Try again"
+            style={{
+              marginTop: 12,
+              minHeight: 44,
+              padding: "0 24px",
+              borderRadius: 22,
+              border: "none",
+              background: "var(--tone-ink)",
+              color: "var(--tone-paper)",
+              cursor: "pointer",
+              fontFamily: "var(--display)",
+              fontStyle: "italic",
+              fontSize: 16,
+              boxShadow: "0 6px 18px rgba(45,40,32,0.18)",
+            }}
+          >
+            try again →
+          </button>
+          <button
+            onClick={() => dispatch({ type: "BACK_TO_MOOD" })}
+            aria-label="Back to mood selection"
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              fontFamily: "var(--mono)",
+              fontSize: 10,
+              letterSpacing: 2,
+              textTransform: "uppercase",
+              color: "var(--tone-ink-soft)",
+              padding: "8px 16px",
+              minHeight: 44,
+            }}
+          >
+            ← back to mood
+          </button>
+        </div>
+      )}
+
+      {state.phase === "reveal" && (
         <RevealScreen
           entries={entries}
           mood={mood}
           date={today}
           palette={palette}
-          onShare={() => setStep(7)}
-          onBack={() => setStep(4)}
+          imageUrl={imageUrl}
+          onShare={() => dispatch({ type: "GO_SHARE" })}
+          onBack={() => dispatch({ type: "BACK_TO_MOOD" })}
         />
       )}
 
-      {step === 7 && (
+      {state.phase === "share" && (
         <ShareScreen
-          onBack={() => setStep(6)}
+          onBack={() => dispatch({ type: "BACK_TO_REVEAL" })}
           palette={palette}
           date={today}
+          entries={entries}
+          mood={mood}
+          imageUrl={imageUrl}
+          entryId={entryId}
         />
       )}
 
-      {step >= 6 && (
+      {showResetButton && (
         <button
           onClick={reset}
           aria-label="Start over"

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#f5efe2"/>
+  <circle cx="200" cy="280" r="18" fill="#c46a3a"/>
+  <circle cx="256" cy="200" r="18" fill="#6e8b5a"/>
+  <circle cx="312" cy="260" r="18" fill="#e3b659"/>
+  <text x="256" y="420" text-anchor="middle" font-family="Georgia,serif" font-size="64" fill="#4a3728" letter-spacing="8">BLOOM</text>
+</svg>

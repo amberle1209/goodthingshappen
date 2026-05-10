@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { DateInfo, Palette } from "@/lib/types";
+import { track } from "@/lib/analytics";
 import { GhostBtn, PrimaryBtn, StepDots } from "./ui";
 
 interface ShareScreenProps {
@@ -85,7 +86,11 @@ export function ShareScreen({ onBack, palette, date }: ShareScreenProps) {
           return (
             <button
               key={o.id}
-              onClick={() => setShared(o.id)}
+              onClick={() => {
+                const method = o.id === "x" ? "twitter" : o.id === "save" ? "download" : "native";
+                track({ event: "card_shared", method });
+                setShared(o.id);
+              }}
               style={{
                 display: "flex",
                 alignItems: "center",

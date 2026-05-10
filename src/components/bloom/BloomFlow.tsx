@@ -3,6 +3,8 @@
 import { useCallback, useState } from "react";
 import type { MoodId, ToneName } from "@/lib/types";
 import { TONE_PALETTES, getToday } from "@/lib/constants";
+import { loadDraft, clearDraft, useDraftPersistence } from "@/lib/useDraftPersistence";
+import { track } from "@/lib/analytics";
 import { WelcomeScreen } from "./WelcomeScreen";
 import { GoodThingScreen } from "./GoodThingScreen";
 import { MoodScreen } from "./MoodScreen";
@@ -22,21 +24,27 @@ export function BloomFlow({
   const palette = TONE_PALETTES[tone];
   const today = getToday();
 
-  // 0 welcome → 1/2/3 good things → 4 mood → 5 tear+loading → 6 reveal → 7 share
-  const [step, setStep] = useState(0);
-  const [entries, setEntries] = useState(["", "", ""]);
-  const [mood, setMood] = useState<MoodId | "">("");
+  const [draft] = useState(loadDraft);
+  const [step, setStep] = useState(() => {
+    if (draft) track({ event: "draft_restored" });
+    return draft?.step ?? 0;
+  });
+  const [entries, setEntries] = useState(draft?.entries ?? ["", "", ""]);
+  const [mood, setMood] = useState<MoodId | "">(draft?.mood ?? "");
+  useDraftPersistence(entries, mood, step);
 
   const setEntry = (i: number, v: string) =>
     setEntries((es) => es.map((e, j) => (j === i ? v : e)));
 
   const reset = () => {
+    track({ event: "flow_reset" });
+    clearDraft();
     setEntries(["", "", ""]);
     setMood("");
     setStep(0);
   };
 
-  const handleTearDone = useCallback(() => setStep(6), []);
+  const handleTearDone = useCallback(() => { track({ event: "card_revealed" }); setStep(6); }, []);
 
   return (
     <div
@@ -50,7 +58,7 @@ export function BloomFlow({
       }}
     >
       {step === 0 && (
-        <WelcomeScreen onBegin={() => setStep(1)} date={today} />
+        <WelcomeScreen onBegin={() => { track({ event: "flow_started" }); setStep(1); }} date={today} />
       )}
 
       {step >= 1 && step <= 3 && (
@@ -59,7 +67,7 @@ export function BloomFlow({
           index={step - 1}
           value={entries[step - 1]}
           onChange={(v) => setEntry(step - 1, v)}
-          onNext={() => setStep(step + 1)}
+          onNext={() => { track({ event: "entry_completed", index: step - 1 }); setStep(step + 1); }}
           onBack={() => setStep(step - 1)}
           palette={palette}
           particleIntensity={particleIntensity}
@@ -70,7 +78,7 @@ export function BloomFlow({
         <MoodScreen
           value={mood}
           onChange={setMood}
-          onNext={() => setStep(5)}
+          onNext={() => { track({ event: "mood_selected", mood: mood || "unknown" }); track({ event: "generation_started" }); setStep(5); }}
           onBack={() => setStep(3)}
           palette={palette}
         />

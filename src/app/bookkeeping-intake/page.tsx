@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 const emailTo = "hello@example.com";
 
@@ -41,6 +41,10 @@ export default function BookkeepingIntakePage() {
   const [volume, setVolume] = useState("10-25");
   const [pain, setPain] = useState("missing documents");
   const [status, setStatus] = useState("Ready when you are.");
+
+  useEffect(() => {
+    document.title = "Bookkeeping Intake Cleanup";
+  }, []);
 
   const message = useMemo(() => {
     return [
